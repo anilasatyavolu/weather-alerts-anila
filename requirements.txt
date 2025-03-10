@@ -1,0 +1,6 @@
+Flask>=3.0.0
+google-cloud-bigquery
+gunicorn
+Werkzeug>=3.0.0
+
+
