@@ -10,10 +10,10 @@ app = Flask(__name__)
 client = bigquery.Client()
 
 # Twilio & SendGrid API Keys
-TWILIO_SID = "ACd274f0eb40ca9d6e0ceb301bb8398f06"
-TWILIO_AUTH_TOKEN = "296975995c2ced0c31489cce5f56774e"
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
+TWILIO_SID = os.getenv("TWILIO_SID")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 TWILIO_PHONE = "+17788378660"
-SENDGRID_API_KEY = "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"
 EMAIL_SENDER = "anilasatyavolu@gmail.com"
 
 DATASET_ID = "user_data"
