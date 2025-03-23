@@ -21,14 +21,21 @@ USER_TABLE = "user_input_table"
 WEATHER_TABLE = "weather_data"
 NOTIF_TABLE = "notifications"
 
-def fetch_users():
-    """Fetch users from BigQuery who have a notification method."""
-    query = f"""
-    SELECT user_id, email_id, phone_number, location, notification_method
-    FROM `{DATASET_ID}.{USER_TABLE}`
-    WHERE ARRAY_LENGTH(notification_method) > 0
-    """
-    return [dict(row) for row in client.query(query).result()]
+# Service 1 API URL
+SERVICE_1_URL = os.getenv("https://user-subscription-service-anila-235097227455.us-central1.run.app")  # Store Service 1 URL as an env variable
+
+def fetch_subscribed_users():
+    """Fetch users from Service 1 who have subscribed for notifications."""
+    try:
+        response = requests.get(f"{SERVICE_1_URL}/get_subscribed_users", timeout=5)
+        if response.status_code == 200:
+            return response.json().get("users", [])
+        else:
+            print(f"Error fetching users from Service 1: {response.text}")
+            return []
+    except Exception as e:
+        print(f"Error connecting to Service 1: {str(e)}")
+        return []
 
 def fetch_weather(user_id, location):
     """Fetch latest weather data for the user."""
@@ -93,18 +100,21 @@ def log_notification(user_id, location, method, status, message):
 
 @app.route('/send_notifications', methods=['POST'])
 def send_notifications():
-    """Fetch users, get weather, and send notifications."""
-    users = fetch_users()
+    """Fetch users from Service 1, get weather, and send notifications."""
+    users = fetch_subscribed_users()
     if not users:
-        return jsonify({"message": "No users with notifications set."}), 200
+        return jsonify({"message": "No subscribed users found."}), 200
 
     notifications = []
 
     for user in users:
         user_id = user["user_id"]
         location = user["location"]
-        weather = fetch_weather(user_id, location)
+        email_id = user.get("email_id")
+        phone_number = user.get("phone_number")
+        notification_method = user.get("notification_method", [])
 
+        weather = fetch_weather(user_id, location)
         if not weather:
             continue
 
@@ -113,11 +123,11 @@ def send_notifications():
                    f"Temp: {weather['temperature']}°C, "
                    f"Humidity: {weather['humidity']}%.")
 
-        for method in user["notification_method"]:
-            if method == "email" and user["email_id"]:
-                status = send_email(user["email_id"], "Weather Update", message)
-            elif method == "SMS" and user["phone_number"]:
-                status = send_sms(user["phone_number"], message)
+        for method in notification_method:
+            if method == "email" and email_id:
+                status = send_email(email_id, "Weather Update", message)
+            elif method == "SMS" and phone_number:
+                status = send_sms(phone_number, message)
             else:
                 continue
 
